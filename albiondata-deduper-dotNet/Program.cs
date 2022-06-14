@@ -26,10 +26,10 @@ namespace albiondata_deduper_dotNet
     public static string RedisPassword { get; set; } = "";
 
     [Option(Description = "Incoming NATS Url", ShortName = "n", ShowInHelpText = true)]
-    public static string IncomingNatsUrl { get; set; } = "nats://public:thenewalbiondata@albion-online-data.com:4222";
+    public static string IncomingNatsUrl { get; set; } = "";
 
     [Option(Description = "Outgoing NATS Url", ShortName = "o", ShowInHelpText = true)]
-    public static string OutgoingNatsUrl { get; set; } = "nats://public:thenewalbiondata@localhost:4222";
+    public static string OutgoingNatsUrl { get; set; } = "";
 
     [Option(Description = "Enable Debug Logging", ShortName = "d", LongName = "debug", ShowInHelpText = true)]
     public static bool Debug { get; set; }
