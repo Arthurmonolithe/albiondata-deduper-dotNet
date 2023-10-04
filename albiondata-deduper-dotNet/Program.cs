@@ -72,8 +72,7 @@ namespace albiondata_deduper_dotNet
     private static readonly Lazy<IConnection> lazyIncomingNats = new Lazy<IConnection>(() =>
     {
       var natsFactory = new ConnectionFactory();
-      //return natsFactory.CreateConnection(IncomingNatsUrl);
-      return;
+      return natsFactory.CreateConnection(IncomingNatsUrl);
     });
 
     public static IConnection IncomingNatsConnection
