@@ -43,15 +43,15 @@ namespace albiondata_deduper_dotNet
 
     #region Connections
     // private static readonly Lazy<ConnectionMultiplexer> lazyRedis = new Lazy<ConnectionMultiplexer>(() =>
-    {
+    // {
     //   var config = new ConfigurationOptions();
     //   config.EndPoints.Add(RedisAddress);
     //   config.Password = RedisPassword;
     //   config.AbortOnConnectFail = false;
-      config.ConnectRetry = 5;
-      config.ConnectTimeout = 1000;
+    //   config.ConnectRetry = 5;
+    //   config.ConnectTimeout = 1000;
     //   return ConnectionMultiplexer.Connect(config);
-    });
+    // });
 
     public static ConnectionMultiplexer RedisConnection
     {
