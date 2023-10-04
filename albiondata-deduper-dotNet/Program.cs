@@ -1,9 +1,9 @@
 using AlbionData.Models;
 using McMaster.Extensions.CommandLineUtils;
 using Microsoft.Extensions.Logging;
-// using NATS.Client;
+using NATS.Client;
 using Newtonsoft.Json;
-// using StackExchange.Redis;
+using StackExchange.Redis;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -19,17 +19,17 @@ namespace albiondata_deduper_dotNet
   {
     private static void Main(string[] args) => CommandLineApplication.Execute<Program>(args);
 
-    // [Option(Description = "Redis URL", ShortName = "r", ShowInHelpText = true)]
-    // public static string RedisAddress // { get; set; } = "localhost:6379";
+    [Option(Description = "Redis URL", ShortName = "r", ShowInHelpText = true)]
+    public static string RedisAddress { get; set; } = "localhost:6379";
 
-    // [Option(Description = "Redis Password", ShortName = "p", ShowInHelpText = true)]
-    // public static string RedisPassword // { get; set; } = "";
+    [Option(Description = "Redis Password", ShortName = "p", ShowInHelpText = true)]
+    public static string RedisPassword { get; set; } = "";
 
-    // [Option(Description = "Incoming NATS Url", ShortName = "n", ShowInHelpText = true)]
-    // public static string IncomingNatsUrl // { get; set; } = "";
+    [Option(Description = "Incoming NATS Url", ShortName = "n", ShowInHelpText = true)]
+    public static string IncomingNatsUrl { get; set; } = "";
 
-    // [Option(Description = "Outgoing NATS Url", ShortName = "o", ShowInHelpText = true)]
-    // public static string OutgoingNatsUrl // { get; set; } = "";
+    [Option(Description = "Outgoing NATS Url", ShortName = "o", ShowInHelpText = true)]
+    public static string OutgoingNatsUrl { get; set; } = "";
 
     [Option(Description = "Enable Debug Logging", ShortName = "d", LongName = "debug", ShowInHelpText = true)]
     public static bool Debug { get; set; }
@@ -42,16 +42,16 @@ namespace albiondata_deduper_dotNet
     private static readonly Dictionary<int, string> itemIdMapping = new Dictionary<int, string>();
 
     #region Connections
-    // private static readonly Lazy<ConnectionMultiplexer> lazyRedis = new Lazy<ConnectionMultiplexer>(() =>
-    // {
-    //   var config = new ConfigurationOptions();
-    //   config.EndPoints.Add(RedisAddress);
-    //   config.Password = RedisPassword;
-    //   config.AbortOnConnectFail = false;
-    //   config.ConnectRetry = 5;
-    //   config.ConnectTimeout = 1000;
-    //   return ConnectionMultiplexer.Connect(config);
-    // });
+    private static readonly Lazy<ConnectionMultiplexer> lazyRedis = new Lazy<ConnectionMultiplexer>(() =>
+    {
+      var config = new ConfigurationOptions();
+      config.EndPoints.Add(RedisAddress);
+      config.Password = RedisPassword;
+      config.AbortOnConnectFail = false;
+      config.ConnectRetry = 5;
+      config.ConnectTimeout = 1000;
+      return ConnectionMultiplexer.Connect(config);
+    });
 
     public static ConnectionMultiplexer RedisConnection
     {
@@ -118,16 +118,16 @@ namespace albiondata_deduper_dotNet
       };
 
       var logger = CreateLogger<Program>();
-      logger.LogInformation($"Redis URL: // {RedisAddress}");
-      logger.LogInformation($"Incoming Nats URL: // {IncomingNatsUrl}");
-      logger.LogInformation($"Outgoing Nats URL: // {OutgoingNatsUrl}");
+      logger.LogInformation($"Redis URL: {RedisAddress}");
+      logger.LogInformation($"Incoming Nats URL: {IncomingNatsUrl}");
+      logger.LogInformation($"Outgoing Nats URL: {OutgoingNatsUrl}");
 
       if (Debug)
       {
         logger.LogInformation("Debugging enabled");
       }
 
-      logger.LogInformation($"Redis Connected: // {RedisConnection.IsConnected}");
+      logger.LogInformation($"Redis Connected: {RedisConnection.IsConnected}");
 
       var itemIdFile = new HttpClient().GetStringAsync("https://raw.githubusercontent.com/ao-data/ao-bin-dumps/master/formatted/items.txt").Result;
       foreach (var line in itemIdFile.Split("\n", StringSplitOptions.RemoveEmptyEntries))
@@ -139,8 +139,8 @@ namespace albiondata_deduper_dotNet
         }
       }
 
-      logger.LogInformation($"Incoming NATS Connected, ID: // {IncomingNatsConnection.ConnectedId}");
-      logger.LogInformation($"Outgoing NATS Connected, ID: // {OutgoingNatsConnection.ConnectedId}");
+      logger.LogInformation($"Incoming NATS Connected, ID: {IncomingNatsConnection.ConnectedId}");
+      logger.LogInformation($"Outgoing NATS Connected, ID: {OutgoingNatsConnection.ConnectedId}");
       var incomingMarketOrders = IncomingNatsConnection.SubscribeAsync(marketOrdersIngest);
       var incomingHistories = IncomingNatsConnection.SubscribeAsync(marketHistoriesIngest);
       var incomingMapData = IncomingNatsConnection.SubscribeAsync(mapDataIngest);
@@ -174,7 +174,7 @@ namespace albiondata_deduper_dotNet
       {
         var marketUpload = JsonConvert.DeserializeObject<MarketUpload>(Encoding.UTF8.GetString(message.Data));
         List<MarketOrder> orderArray = new List<MarketOrder>();
-        logger.LogInformation($"Processing // {marketUpload.Orders.Count} Market Orders - // {DateTime.Now.ToLongTimeString()}");
+        logger.LogInformation($"Processing {marketUpload.Orders.Count} Market Orders - {DateTime.Now.ToLongTimeString()}");
         foreach (var order in marketUpload.Orders)
         {
           // Hack since albion seems to be multiplying every price by 10000?
@@ -185,8 +185,8 @@ namespace albiondata_deduper_dotNet
             order.LocationId = (ushort)Location.Caerleon;
           }
           // Make the hash unique while also including anything that could change
-          var hash = $"// {order.Id}|// {order.LocationId}|// {order.Amount}|// {order.UnitPriceSilver}|// {order.Expires.ToString("s")}";
-          var key = $"// {message.Subject}-// {hash}";
+          var hash = $"{order.Id}|{order.LocationId}|{order.Amount}|{order.UnitPriceSilver}|{order.Expires.ToString("s")}";
+          var key = $"{message.Subject}-{hash}";
           if (!IsDupedMessage(logger, key))
           {
             OutgoingNatsConnection.Publish(marketOrdersDeduped, Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(order)));
@@ -196,7 +196,7 @@ namespace albiondata_deduper_dotNet
 
         if (orderArray.Count > 0)
         {
-          logger.LogInformation($"Found // {orderArray.Count} New Market Orders - // {DateTime.Now.ToLongTimeString()}");
+          logger.LogInformation($"Found {orderArray.Count} New Market Orders - {DateTime.Now.ToLongTimeString()}");
           OutgoingNatsConnection.Publish(marketOrdersDedupedBulk, Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(orderArray)));
         }
       }
@@ -218,7 +218,7 @@ namespace albiondata_deduper_dotNet
         marketHistoriesUpload.MarketHistories.Sort((a, b) => a.Timestamp.CompareTo(b.Timestamp) * -1);
 
         using var md5 = MD5.Create();
-        logger.LogInformation($"Processing // {marketHistoriesUpload.MarketHistories.Count} Market Histories - // {DateTime.Now.ToLongTimeString()}");
+        logger.LogInformation($"Processing {marketHistoriesUpload.MarketHistories.Count} Market Histories - {DateTime.Now.ToLongTimeString()}");
         foreach (var marketHistory in marketHistoriesUpload.MarketHistories)
         {
           // Hack since albion seems to be multiplying every price by 10000?
@@ -237,7 +237,7 @@ namespace albiondata_deduper_dotNet
         var newUploadStringBytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(marketHistoriesUpload));
 
         var hash = Encoding.UTF8.GetString(md5.ComputeHash(newUploadStringBytes));
-        var key = $"// {message.Subject}-// {hash}";
+        var key = $"{message.Subject}-{hash}";
 
         var expire = TimeSpan.FromHours(6);
         if (marketHistoriesUpload.Timescale == Timescale.Day)
@@ -265,7 +265,7 @@ namespace albiondata_deduper_dotNet
         using var md5 = MD5.Create();
         logger.LogInformation("Processing Map Data");
         var hash = Encoding.UTF8.GetString(md5.ComputeHash(message.Data));
-        var key = $"// {message.Subject}-// {hash}";
+        var key = $"{message.Subject}-{hash}";
         if (!IsDupedMessage(logger, key))
         {
           OutgoingNatsConnection.Publish(mapDataDeduped, message.Data);
@@ -286,7 +286,7 @@ namespace albiondata_deduper_dotNet
         using var md5 = MD5.Create();
         logger.LogInformation("Processing Gold Data");
         var hash = Encoding.UTF8.GetString(md5.ComputeHash(message.Data));
-        var key = $"// {message.Subject}-// {hash}";
+        var key = $"{message.Subject}-{hash}";
         if (!IsDupedMessage(logger, key))
         {
           OutgoingNatsConnection.Publish(goldDataDeduped, message.Data);
@@ -306,7 +306,7 @@ namespace albiondata_deduper_dotNet
     private static bool IsDupedMessage(ILogger logger, string key, TimeSpan expire = default)
     {
       try
-       {
+      {
         var value = RedisCache.StringGet(key);
         if (value.IsNullOrEmpty)
         {
@@ -316,7 +316,7 @@ namespace albiondata_deduper_dotNet
           return false;
         }
         else
-         {
+        {
           return true;
         }
       }
