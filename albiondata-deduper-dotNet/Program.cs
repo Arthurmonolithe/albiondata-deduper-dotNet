@@ -14,9 +14,9 @@ using System.Text;
 using System.Threading;
 
 namespace albiondata_deduper_dotNet
-// {
+{
   public class Program
-  // {
+  {
     private static void Main(string[] args) => CommandLineApplication.Execute<Program>(args);
 
     // [Option(Description = "Redis URL", ShortName = "r", ShowInHelpText = true)]
@@ -32,9 +32,9 @@ namespace albiondata_deduper_dotNet
     // public static string OutgoingNatsUrl // { get; set; } = "";
 
     [Option(Description = "Enable Debug Logging", ShortName = "d", LongName = "debug", ShowInHelpText = true)]
-    public static bool Debug // { get; set; }
+    public static bool Debug { get; set; }
 
-    public static ILoggerFactory Logger // { get; } = LoggerFactory.Create(builder => builder.AddConsole().SetMinimumLevel(Debug ? LogLevel.Debug : LogLevel.Information));
+    public static ILoggerFactory Logger { get; } = LoggerFactory.Create(builder => builder.AddConsole().SetMinimumLevel(Debug ? LogLevel.Debug : LogLevel.Information));
     public static ILogger CreateLogger<T>() => Logger.CreateLogger<T>();
 
     private static readonly ManualResetEvent quitEvent = new ManualResetEvent(false);
@@ -43,7 +43,7 @@ namespace albiondata_deduper_dotNet
 
     #region Connections
     // private static readonly Lazy<ConnectionMultiplexer> lazyRedis = new Lazy<ConnectionMultiplexer>(() =>
-    // {
+    {
     //   var config = new ConfigurationOptions();
     //   config.EndPoints.Add(RedisAddress);
     //   config.Password = RedisPassword;
@@ -51,48 +51,48 @@ namespace albiondata_deduper_dotNet
       config.ConnectRetry = 5;
       config.ConnectTimeout = 1000;
     //   return ConnectionMultiplexer.Connect(config);
-    // });
+    });
 
     public static ConnectionMultiplexer RedisConnection
-    // {
+    {
       get
-      // {
+      {
         return lazyRedis.Value;
       }
     }
 
     public static IDatabase RedisCache
-    // {
+    {
       get
-      // {
+      {
         return RedisConnection.GetDatabase(0);
       }
     }
 
     private static readonly Lazy<IConnection> lazyIncomingNats = new Lazy<IConnection>(() =>
-    // {
+    {
       var natsFactory = new ConnectionFactory();
       return natsFactory.CreateConnection(IncomingNatsUrl);
-    // });
+    });
 
     public static IConnection IncomingNatsConnection
-    // {
+    {
       get
-      // {
+      {
         return lazyIncomingNats.Value;
       }
     }
 
     private static readonly Lazy<IConnection> lazyOutgoingNats = new Lazy<IConnection>(() =>
-    // {
+    {
       var natsFactory = new ConnectionFactory();
       return natsFactory.CreateConnection(OutgoingNatsUrl);
-    // });
+    });
 
     public static IConnection OutgoingNatsConnection
-    // {
+    {
       get
-      // {
+      {
         return lazyOutgoingNats.Value;
       }
     }
@@ -110,9 +110,9 @@ namespace albiondata_deduper_dotNet
     #endregion
 
     private void OnExecute()
-    // {
+    {
       Console.CancelKeyPress += (sender, args) =>
-      // {
+      {
         quitEvent.Set();
         args.Cancel = true;
       };
@@ -123,7 +123,7 @@ namespace albiondata_deduper_dotNet
       logger.LogInformation($"Outgoing Nats URL: // {OutgoingNatsUrl}");
 
       if (Debug)
-      // {
+      {
         logger.LogInformation("Debugging enabled");
       }
 
@@ -131,10 +131,10 @@ namespace albiondata_deduper_dotNet
 
       var itemIdFile = new HttpClient().GetStringAsync("https://raw.githubusercontent.com/ao-data/ao-bin-dumps/master/formatted/items.txt").Result;
       foreach (var line in itemIdFile.Split("\n", StringSplitOptions.RemoveEmptyEntries))
-      // {
+      {
         var split = line.Split(':').Select(x => x.Trim());
         if (split.Any())
-        // {
+        {
           itemIdMapping.Add(int.Parse(split.First()), split.Skip(1).First());
         }
       }
@@ -167,51 +167,51 @@ namespace albiondata_deduper_dotNet
     }
 
     private static void HandleMarketOrder(object sender, MsgHandlerEventArgs args)
-    // {
+    {
       var logger = CreateLogger<Program>();
       var message = args.Message;
       try
-      // {
+      {
         var marketUpload = JsonConvert.DeserializeObject<MarketUpload>(Encoding.UTF8.GetString(message.Data));
         List<MarketOrder> orderArray = new List<MarketOrder>();
         logger.LogInformation($"Processing // {marketUpload.Orders.Count} Market Orders - // {DateTime.Now.ToLongTimeString()}");
         foreach (var order in marketUpload.Orders)
-        // {
+        {
           // Hack since albion seems to be multiplying every price by 10000?
           order.UnitPriceSilver /= 10000;
           // Make sure all caerleon markets are registered with the same ID since they have the same contents
           if (order.LocationId == (ushort)Location.Caerleon2)
-          // {
+          {
             order.LocationId = (ushort)Location.Caerleon;
           }
           // Make the hash unique while also including anything that could change
           var hash = $"// {order.Id}|// {order.LocationId}|// {order.Amount}|// {order.UnitPriceSilver}|// {order.Expires.ToString("s")}";
           var key = $"// {message.Subject}-// {hash}";
           if (!IsDupedMessage(logger, key))
-          // {
+          {
             OutgoingNatsConnection.Publish(marketOrdersDeduped, Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(order)));
             orderArray.Add(order);
           }
         }
 
         if (orderArray.Count > 0)
-        // {
+        {
           logger.LogInformation($"Found // {orderArray.Count} New Market Orders - // {DateTime.Now.ToLongTimeString()}");
           OutgoingNatsConnection.Publish(marketOrdersDedupedBulk, Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(orderArray)));
         }
       }
       catch (Exception ex)
-      // {
+      {
         logger.LogError(ex, "Error handling market order");
       }
     }
 
     private static void HandleHistory(object sender, MsgHandlerEventArgs args)
-    // {
+    {
       var logger = CreateLogger<Program>();
       var message = args.Message;
       try
-      // {
+      {
         var marketHistoriesUpload = JsonConvert.DeserializeObject<MarketHistoriesUpload>(Encoding.UTF8.GetString(message.Data));
 
         // Sort history by descending time so the newest is always first in the list
@@ -220,14 +220,14 @@ namespace albiondata_deduper_dotNet
         using var md5 = MD5.Create();
         logger.LogInformation($"Processing // {marketHistoriesUpload.MarketHistories.Count} Market Histories - // {DateTime.Now.ToLongTimeString()}");
         foreach (var marketHistory in marketHistoriesUpload.MarketHistories)
-        // {
+        {
           // Hack since albion seems to be multiplying every price by 10000?
           marketHistory.SilverAmount /= 10000;
         }
 
         // Make sure all caerleon markets are registered with the same ID since they have the same contents
         if (marketHistoriesUpload.LocationId == (ushort)Location.Caerleon2)
-        // {
+        {
           marketHistoriesUpload.LocationId = (ushort)Location.Caerleon;
         }
 
@@ -241,59 +241,59 @@ namespace albiondata_deduper_dotNet
 
         var expire = TimeSpan.FromHours(6);
         if (marketHistoriesUpload.Timescale == Timescale.Day)
-        // {
+        {
           expire = TimeSpan.FromHours(1);
         }
 
         if (!IsDupedMessage(logger, key, expire))
-        // {
+        {
           OutgoingNatsConnection.Publish(marketHistoriesDeduped, newUploadStringBytes);
         }
       }
       catch (Exception ex)
-      // {
+      {
         logger.LogError(ex, "Error handling market history");
       }
     }
 
     private static void HandleMapData(object sender, MsgHandlerEventArgs args)
-    // {
+    {
       var logger = CreateLogger<Program>();
       var message = args.Message;
       try
-      // {
+      {
         using var md5 = MD5.Create();
         logger.LogInformation("Processing Map Data");
         var hash = Encoding.UTF8.GetString(md5.ComputeHash(message.Data));
         var key = $"// {message.Subject}-// {hash}";
         if (!IsDupedMessage(logger, key))
-        // {
+        {
           OutgoingNatsConnection.Publish(mapDataDeduped, message.Data);
         }
       }
       catch (Exception ex)
-      // {
+      {
         logger.LogError(ex, "Error handling map data");
       }
     }
 
     private static void HandleGoldData(object sender, MsgHandlerEventArgs args)
-    // {
+    {
       var logger = CreateLogger<Program>();
       var message = args.Message;
       try
-      // {
+      {
         using var md5 = MD5.Create();
         logger.LogInformation("Processing Gold Data");
         var hash = Encoding.UTF8.GetString(md5.ComputeHash(message.Data));
         var key = $"// {message.Subject}-// {hash}";
         if (!IsDupedMessage(logger, key))
-        // {
+        {
           OutgoingNatsConnection.Publish(goldDataDeduped, message.Data);
         }
       }
       catch (Exception ex)
-      // {
+      {
         logger.LogError(ex, "Error handling gold data");
       }
     }
@@ -304,41 +304,41 @@ namespace albiondata_deduper_dotNet
     /// <param name="logger"></param>
     /// <param name="key"></param>
     private static bool IsDupedMessage(ILogger logger, string key, TimeSpan expire = default)
-    // {
+    {
       try
-      // {
+       {
         var value = RedisCache.StringGet(key);
         if (value.IsNullOrEmpty)
-        // {
+        {
           // No value means we have not seen it before
           // Only set the key when new so that messages will be sent every X minutes so the item can be marked as still available
           SetKey(logger, key, expire);
           return false;
         }
         else
-        // {
+         {
           return true;
         }
       }
       catch (Exception ex)
-      // {
+      {
         logger.LogError(ex, "Error checking redis cache");
         return false;
       }
     }
 
     private static void SetKey(ILogger logger, string key, TimeSpan expire = default)
-    // {
+    {
       try
-      // {
+      {
         if (expire == default)
-        // {
+        {
           expire = TimeSpan.FromSeconds(600);
         }
         RedisCache.StringSet(key, 1, expire);
       }
       catch (Exception ex)
-      // {
+      {
         logger.LogError(ex, "Error setting redis cache");
       }
     }
